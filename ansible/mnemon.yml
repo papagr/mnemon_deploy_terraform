@@ -60,7 +60,6 @@
       copy:
         src: "{{ ssl_cert.stdout }}.crt"
         dest: /etc/ssl/certs/mnemon.pem
-        remote_src: yes
       become: yes
       notify: Reload Apache
 
@@ -68,7 +67,6 @@
       copy:
         src: "{{ ssl_cert.stdout }}.prv"
         dest: /etc/ssl/certs/mnemon.key
-        remote_src: yes
       become: yes
       notify: Reload Apache
 
