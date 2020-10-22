@@ -57,16 +57,12 @@
       become: yes
 
     - name: Copy SSL certificate
-      copy:
-        src: "{{ ssl_cert.stdout }}.crt"
-        dest: /etc/ssl/certs/mnemon.pem
+      command: "cp {{ ssl_cert.stdout }}.crt /etc/ssl/certs/mnemon.pem"
       become: yes
       notify: Reload Apache
 
     - name: Copy SSL certificate private key
-      copy:
-        src: "{{ ssl_cert.stdout }}.prv"
-        dest: /etc/ssl/certs/mnemon.key
+      command: "cp {{ ssl_cert.stdout }}.prv /etc/ssl/private/mnemon.key"
       become: yes
       notify: Reload Apache
 
