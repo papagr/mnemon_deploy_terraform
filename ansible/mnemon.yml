@@ -1,0 +1,123 @@
+---
+
+- hosts: localhost
+  connection: local
+
+  vars:
+    mnemon_config: ~/mnemon/etc/mnemon.ini
+
+  tasks:
+    - name: Add dead-snakes PPA
+      apt_repository:
+        repo: ppa:deadsnakes/ppa
+      become: yes
+
+    - name: Install packages
+      apt:
+        pkg:
+          - mongodb
+          - build-essential
+          - python3.6
+          - python3.6-dev
+          - python3-pip
+          - python3-virtualenv
+          - python-virtualenv
+          - apache2
+          - supervisor
+      become: yes
+
+    - name: Install Mnemon
+      pip:
+        name: git+http://github.com/papagr/mnemon.git
+        virtualenv: ~/mnemon
+        virtualenv_python: python3.6
+
+    - name: Create cookie secret
+      command: python3 -c "import binascii,os;print(binascii.hexlify(os.urandom(24)).decode('utf-8'))"
+      register: secret
+
+    - name: Create config dir
+      file:
+        path: ~/mnemon/etc
+        state: directory
+
+    - name: Create Mnemon configuration
+      template:
+        src: ./files/mnemon.j2
+        dest: "{{ mnemon_config }}"
+      vars:
+        secret_key: "{{ secret.stdout }}"
+
+    - name: Initialize database
+      command: "~/mnemon/bin/init_mnemon_mongodb {{ mnemon_config }}"
+
+    - name: Find SSL certificate filename
+      command: find /var/lib/waagent/ -name "*.prv" | cut -c -57
+      register: ssl_cert
+      become: yes
+
+    - name: Copy SSL certificate
+      copy:
+        src: "{{ ssl_cert.stdout }}.crt"
+        dest: /etc/ssl/certs/mnemon.pem
+        remote_src: yes
+      become: yes
+      notify: Reload Apache
+
+    - name: Copy SSL certificate private key
+      copy:
+        src: "{{ ssl_cert.stdout }}.prv"
+        dest: /etc/ssl/certs/mnemon.key
+        remote_src: yes
+      become: yes
+      notify: Reload Apache
+
+    - name: Copy Apache configuration files
+      copy:
+        src: "./files/{{ item }}"
+        dest: /etc/apache2/sites-available/
+      become: yes
+      loop:
+        - 000-default.conf
+        - default-ssl.conf
+      notify: Reload Apache
+
+    - name: Copy Supervisor configuration for Mnemon
+      copy:
+        src: ./files/mnemon.conf
+        dest: /etc/supervisor/conf.d/
+      become: yes
+      notify: Reload Supervisor
+
+    - name: Enable Apache SSL site
+      command: a2ensite default-ssl
+      become: yes
+      notify: Reload Apache
+
+    - name: Enable Apache modules
+      command: "a2enmod {{ item }}"
+      become: yes
+      loop:
+        - ssl
+        - proxy
+        - proxy_http
+      notify: Restart Apache
+
+  handlers:
+    - name: Reload Apache
+      service:
+        name: apache2
+        state: reloaded
+      become: yes
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+      become: yes
+
+    - name: Reload Supervisor
+      shell: |
+        supervisorctl reread
+        supervisorctl update
+      become: yes

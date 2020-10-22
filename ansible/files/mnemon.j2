@@ -1,0 +1,78 @@
+###
+# app configuration
+# http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/environment.html
+###
+
+[app:main]
+use = egg:Mnemon#main
+
+pyramid.reload_templates = false
+pyramid.debug_authorization = false
+pyramid.debug_notfound = false
+pyramid.debug_routematch = false
+pyramid.default_locale_name = en
+
+username = {{ web_username }}
+password = {{ web_password }}
+# The secret used for auth_tkt cookie signing
+secret = {{ secret_key }}
+
+mongodb.url = mongodb://localhost:27017/mnemon
+
+# Content Extractor is Arc90 (internal) or FiveFilters (external)
+#extractor = FiveFilters
+extractor = Arc90
+
+# The following appliers when extractor is external
+fivefilters.url = http://ftr-premium.fivefilters.org/makefulltextfeed.php
+fivefilters.apikey = an-api-key-here
+
+# Number of days to keep deleted articles prior to purging
+purge_deleted_after = 30
+
+###
+# wsgi server configuration
+###
+
+[server:main]
+use = egg:waitress#main
+host = localhost
+port = 6543
+url_scheme = https
+
+###
+# logging configuration
+# http://docs.pylonsproject.org/projects/pyramid/en/latest/narr/logging.html
+###
+
+[loggers]
+keys = root, mnemon, waitress
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic
+
+[logger_root]
+level = WARN
+handlers = console
+
+[logger_mnemon]
+level = WARN
+handlers =
+qualname = mnemon
+
+[logger_waitress]
+level = DEBUG
+handlers =
+qualname = waitress
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(message)s
