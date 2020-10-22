@@ -52,7 +52,7 @@
       command: "~/mnemon/bin/init_mnemon_mongodb {{ mnemon_config }}"
 
     - name: Find SSL certificate filename
-      command: find /var/lib/waagent/ -name "*.prv" | cut -c -57
+      shell: find /var/lib/waagent/ -name "*.prv" | cut -c -57
       register: ssl_cert
       become: yes
 
